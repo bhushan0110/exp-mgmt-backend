@@ -11,6 +11,8 @@ const port = 5000;
 app.use(express.json());
 //Available routes
 app.use('/auth',require('./routes/auth'));
+app.use('/expense',require('./routes/expense_category'));
+app.use('/query',require('./routes/operations'));
 
 app.get('/', (req,res) =>{
     res.send("Hello Backend here");
