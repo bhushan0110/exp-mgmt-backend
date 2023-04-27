@@ -6,37 +6,63 @@ const Category = require('../models/Category');
 
 
 // Route to calculate mothly expense category wise and over all
-router.get('/mothlyExpense',authenticate,async(req,res)=>{
-    try{
+router.get('/mothlyExpenseRecord', authenticate, async (req, res) => {
+    try {
         let date = new Date();
-        let month= date.getMonth();
-        
+        let month = date.getMonth();
+
+        //get expense for loggedin user for current month
         const monthlyData = await Expense.find({
             month: month,
             user: req.user.id,
         });
 
-        if(!monthlyData){
+        if (!monthlyData) {
             res.status(201).send("No data for this month");
         }
 
-        const category = await Category.find({user:req.user.id});
-        let totalExpense = 0;
-        let category_expense ={};
+        const category = await Category.find({ user: req.user.id });
+        let totalExpense = 0;           //Store total expense for month
+        let category_expense = {};      //Object to store category wise expense
+        let totalBudget = 0;            //Total Budget
+        let category_budget = {};       //Object to store category wise budget
+        let extraExpence = 0;           // Total extra expense
+        let extraExpence_category = {}; //Category waise extra expense
 
-        for(let index=0; index<category.length;index++){
-            category_expense[`${category[index]._id}`] =0;
+        //Initiallised object with value zero
+        for (let index = 0; index < category.length; index++) {
+            category_expense[`${category[index]._id}`] = 0;
+            totalBudget += category[index].budget;
+            extraExpence_category[`${category[index]._id}`] = 0;
+            //Calculating category wise budget
+            if (category_budget[`${category[index]._id}`]) {
+                category_budget[`${category[index]._id}`] += category[index].budget;
+            } else {
+                category_budget[`${category[index]._id}`] = category[index].budget;
+            }
         }
 
-        for(let index=0;index<monthlyData.length;index++){
-            totalExpense+= monthlyData[index].amount;
-            category_expense[`${monthlyData[index].category}`]+=monthlyData[index].amount;
+        //Calculation of expense
+        for (let index = 0; index < monthlyData.length; index++) {
+            totalExpense += monthlyData[index].amount;
+            category_expense[`${monthlyData[index].category}`] += monthlyData[index].amount;
         }
 
+        //Total extra expence
+        if (totalExpense > totalBudget) {
+            extraExpence = totalExpense - totalBudget;
+        }
 
-        res.json({totalExpense,category_expense});
+        //Calculation of category wise extra expense 
+        for(let key in category_budget){
+            if(category_budget[key]<category_expense[key]){
+                extraExpence_category[key]=category_expense[key]-category_budget[key];
+            }
+        }
+
+        res.json({ totalExpense, category_expense, totalBudget, category_budget, extraExpence, extraExpence_category });
     }
-    catch(err){
+    catch (err) {
         console.log(err);
         res.status(500).send("Internal server error");
     }
