@@ -1,6 +1,6 @@
 const express = require('express');
 const connectToDB = require('./db');
-require('dotenv').config({path:'./env'});
+require('dotenv').config();
 
 
 connectToDB(); // Connect to DB
@@ -13,6 +13,8 @@ app.use(express.json());
 app.use('/auth',require('./routes/auth'));
 app.use('/expense',require('./routes/expense_category'));
 app.use('/query',require('./routes/operations'));
+app.use('/mail',require('./routes/email'));
+
 
 app.get('/', (req,res) =>{
     res.send("Hello Backend here");

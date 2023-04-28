@@ -4,7 +4,7 @@ const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const { body, validationResult } = require('express-validator');
 const jwt = require('jsonwebtoken');
-const JWT_SECRET = 'Bhushan1exp1mgmt1';
+const JWT_SECRET = process.env.JWT_SECRET;
 const authenticate = require('../middleware/authentication');
 // Create a new user
 
@@ -76,9 +76,7 @@ router.post('/login',
             if(!user){
                 return res.status(400).json({error: 'Invalid Credentials'});
             }
-            console.log(user);
             const pass =await  bcrypt.compare(password,user.password);
-            console.log(pass);
             if(!pass){
                 return res.status(400).json({error: 'Invalid Credentials'});
             }
