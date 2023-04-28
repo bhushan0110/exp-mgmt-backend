@@ -5,6 +5,7 @@ const bcrypt = require('bcryptjs');
 const { body, validationResult } = require('express-validator');
 const jwt = require('jsonwebtoken');
 const JWT_SECRET = 'Bhushan1exp1mgmt1';
+const authenticate = require('../middleware/authentication');
 // Create a new user
 
 router.get('/',(req,res)=>{
@@ -75,8 +76,9 @@ router.post('/login',
             if(!user){
                 return res.status(400).json({error: 'Invalid Credentials'});
             }
-
-            const pass = bcrypt.compare(password,user.password);
+            console.log(user);
+            const pass =await  bcrypt.compare(password,user.password);
+            console.log(pass);
             if(!pass){
                 return res.status(400).json({error: 'Invalid Credentials'});
             }
@@ -94,6 +96,32 @@ router.post('/login',
             res.status(500).send('Error occured'); 
         }
     }
-)
+);
+
+router.post('/resetPassword', authenticate,[
+    body('password').isLength({min:5}),
+] ,async(req,res) =>{
+    const error = validationResult(req);
+    if (!error.isEmpty()) {
+        return res.status(400).json({error: error.array()});
+    }
+    try{
+        const salt = await bcrypt.genSalt(10);
+        const encryptedPass = await bcrypt.hash(req.body.password,salt);
+        const reset = await User.findOneAndUpdate({_id: req.user.id}, {password: encryptedPass});
+        if(!reset){
+            console.log(reset);
+            return res.status(500).json({error: 'Internal server error'});
+        }
+
+        res.status(200).json({reset});
+    }
+    catch(error){
+        console.log(error);
+        res.status(500).send('Error occured');
+    }
+});
+
+
 
 module.exports = router;

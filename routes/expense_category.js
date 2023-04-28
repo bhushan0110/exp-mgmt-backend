@@ -47,7 +47,8 @@ router.post('/addCategory', authenticate, [
 
 router.post('/addExpense', authenticate,[
     body('amount').isNumeric({ min: 1 }),
-    body('info').isLength({ min: 1 })       //Validate Expense
+    body('info').isLength({ min: 1 }),       //Validate Expense
+    body('week').isNumeric({min:1,max:4})
 ], async (req, res) => {
     // Validating input
     const error = validationResult(req);
@@ -56,7 +57,7 @@ router.post('/addExpense', authenticate,[
     }
 
     //Destructure
-    const { amount, info, category } = req.body;
+    const { amount, info, category, week } = req.body;
     try {
         //Create new expense
         const month = new Date().getMonth();

@@ -19,9 +19,9 @@ const ExpenseSchema = new mongoose.Schema({
         type: Number,
         required: true,
     },
-    month:{
-        type: Number,
-        required: true, 
+    week:{
+        type:Number,
+        required: true,
     },
     date:{
         type: Date,
