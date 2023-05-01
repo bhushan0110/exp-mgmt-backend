@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const User = require('../models/User');
 const nodemailer = require("nodemailer");
 const {google} = require('googleapis');
 
@@ -11,9 +12,9 @@ const REFRESH_TOKEN = process.env.REFRESH_TOKEN;
 const oAuth2Client = new google.auth.OAuth2(CLIENT_ID,CLIENT_SECRET,REDIRECT_URI);
 oAuth2Client.setCredentials({refresh_token:REFRESH_TOKEN});
 
-router.post('/sendEmail', async(req,res)=>{
+const sendMail = async(body)=>{
+    const {email, message} = body;
     try{
-      
       const accessToken = await oAuth2Client.getAccessToken();
       const transporter = nodemailer.createTransport({
         service: 'gmail',
@@ -30,19 +31,20 @@ router.post('/sendEmail', async(req,res)=>{
 
       const mailOptions = {
         from: 'Expense-Management@AFour Tech <baribhushan9120@gmail.com>',
-        to: 'bhushan.bari@walchandsangli.ac.in',
+        to: email,
         subject: 'Test App',
-        text: "SUCCESS IN SENDING mail"
+        text: `This is your new password ${message}`
       }
 
       const result  =await transporter.sendMail(mailOptions);
       if(result){
-        return res.status(200).send({result});
+        return result;
       }
     }
     catch(err){
       console.log(err);
+      return err;
     }
-});
+};
 
-module.exports = router;
+module.exports = sendMail;

@@ -6,6 +6,7 @@ const { body, validationResult } = require('express-validator');
 const jwt = require('jsonwebtoken');
 const JWT_SECRET = process.env.JWT_SECRET;
 const authenticate = require('../middleware/authentication');
+const sendMail = require('./email');
 // Create a new user
 
 router.get('/',(req,res)=>{
@@ -86,7 +87,8 @@ router.post('/login',
                     id: user.id
                 }
             };
-            const authToken = jwt.sign(data,JWT_SECRET);
+            // const authToken = jwt.sign(data,JWT_SECRET);
+            const authToken = jwt.sign({ data, exp: Math.floor(Date.now() / 1000) + 2*(60 * 60) }, secret);
             res.json({authToken});
         }
         catch(err){
@@ -120,6 +122,30 @@ router.post('/resetPassword', authenticate,[
     }
 });
 
+router.post('/forgotPassword', async (req,res)=>{
+    const email = req.body.email;
+    try{
+        const user = await User.findOne({email:email});
+        if(!user){
+            return res.status(400).json({ error: 'Email not registered' });
+        }
+        const newPass = `${Math.floor(Math.random()*10000)}+Afour`;
+        
+        const success = await sendMail(email,newPass);
+        if(!success){
+            return res.status(500).send("Internal server error");
+        }
+        const salt = await bcrypt.genSalt(10);
+        const encryptedPass = await bcrypt.hash(newPass,salt);
+        const reset = await User.findOneAndUpdate({_id: req.user.id}, {password: encryptedPass});
+
+        return res.status(200).json({success});
+    }
+    catch(err){
+        console.log(err);
+        res.status(500).send('Error occured');
+    }
+});
 
 
 module.exports = router;
