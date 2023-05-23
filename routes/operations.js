@@ -3,15 +3,18 @@ const router = express.Router();
 const authenticate = require('../middleware/authentication');
 const Expense = require('../models/Expense');
 const Category = require('../models/Category');
+const User = require('../models/User');
 
 
-// Route to calculate mothly expense category wise and over all
-router.get('/mothlyExpenseRecord', authenticate, async (req, res) => {
-    try {
+router.get('/dashboardData',authenticate,async(req,res) =>{
+    try{
+        const user = await User.findById({_id: req.user.id});
+        const recentItems = await Expense.find({user:req.user.id}).sort({_id: -1}).limit(3);
+        const category = await Category.find({ user: req.user.id });
         let date = new Date();
         let month = date.getMonth();
 
-        //get expense for loggedin user for current month
+
         const monthlyData = await Expense.find({
             date: {
                 $gte: new Date(new Date().getFullYear(), month, 1),
@@ -20,118 +23,118 @@ router.get('/mothlyExpenseRecord', authenticate, async (req, res) => {
             user: req.user.id,
         });
 
-        if (!monthlyData) {
-            return res.status(201).send("No data for this month");
+        let totalBudget=0;
+        let spend=0;
+
+        for(let i=0;i<category.length;i++){
+            totalBudget+=category[i].budget;
+            spend+=category[i].spend;
         }
 
-        const category = await Category.find({ user: req.user.id });
+        let extra=0;
 
-        let totalExpense = 0;           //Store total expense for month
-        let category_expense = {};      //Object to store category wise expense
-        let totalBudget = 0;            //Total Budget
-        let category_budget = {};       //Object to store category wise budget
-        let extraExpence = 0;           // Total extra expense
-        let extraExpence_category = {}; //Category waise extra expense
-
-        //Initiallised object with value zero
-        for (let index = 0; index < category.length; index++) {
-            category_expense[`${category[index]._id}`] = 0;
-            totalBudget += category[index].budget;
-            extraExpence_category[`${category[index]._id}`] = 0;
-            //Calculating category wise budget
-            if (category_budget[`${category[index]._id}`]) {
-                category_budget[`${category[index]._id}`] += category[index].budget;
-            } else {
-                category_budget[`${category[index]._id}`] = category[index].budget;
-            }
+        if(spend>totalBudget){
+            extra = spend-totalBudget;
         }
 
-        //Calculation of expense
-        for (let index = 0; index < monthlyData.length; index++) {
-            totalExpense += monthlyData[index].amount;
-            category_expense[`${monthlyData[index].category}`] += monthlyData[index].amount;
-        }
+        const pieNm =[], pieVal = [];
 
-        //Total extra expence
-        if (totalExpense > totalBudget) {
-            extraExpence = totalExpense - totalBudget;
-        }
+        category.map((element)=>{
+            pieNm.push(element.name);
+            pieVal.push(element.spend);
+        })
 
-        //Calculation of category wise extra expense 
-        for (let key in category_budget) {
-            if (category_budget[key] < category_expense[key]) {
-                extraExpence_category[key] = category_expense[key] - category_budget[key];
-            }
-        }
-
-        res.json({ totalExpense, category_expense, totalBudget, category_budget, extraExpence, extraExpence_category });
+        res.status(200).send({recentItems,category,totalBudget,spend, extra, user,pieNm,pieVal});
     }
-    catch (err) {
+    catch(err){
         console.log(err);
         res.status(500).send("Internal server error");
     }
 });
 
-router.get('/weeklyExpenseRecord', authenticate, async (req, res) => {
-    try {
-        //query to get expense data for specified week
-        const weeklyData = await Expense.find({ 
-            date:{
-                $gte: new Date(new Date().getFullYear(), month, 1),
-                $lt: new Date(new Date().getFullYear(), month + 1, 1), 
+router.post('/monthlyRecord', authenticate,async(req,res)=>{
+    try{
+        console.log("INSIDE");
+        const date = new Date(req.body.date);
+        
+        const monthlyData = await Expense.find({
+            date: {
+                $gte: new Date(date.getFullYear(),date.getMonth()),
+                $lt: new Date(date.getFullYear(),date.getMonth()+1),
             },
-            week: week, 
-            user: req.user.id });
-        if (!weeklyData) {
-            return res.status(201).send("No data for this week");
+            user: req.user.id,
+        });
+        if(monthlyData){
+            res.status(200).send(monthlyData);
         }
-        const category = await Category.find({ user: req.user.id });
+    }
+    catch(err){
+        console.log(err);
+        res.status(500).send("Internal server errir");
+    }
+});
 
-        let totalExpense = 0;           //Store total expense for week
-        let category_expense = {};      //Object to store category wise expense
-        let totalBudget = 0;            //Total Budget
-        let category_budget = {};       //Object to store category wise budget
-        let extraExpence = 0;           // Total extra expense
-        let extraExpence_category = {}; //Category waise extra expense
+router.post('/customRecord',authenticate,async(req,res)=>{
+    try{
+        const {data} = req.body;
+        const {start , end} = data;
+        const customData = await Expense.find({
+            date: {
+                $gte: new Date(start),
+                $lte: new Date(end),
+            },
+            user: req.user.id,
+        });
 
-        //Initiallised object with value zero
-        for (let index = 0; index < category.length; index++) {
-            category_expense[`${category[index]._id}`] = 0;
-            totalBudget += category[index].budget;
-            extraExpence_category[`${category[index]._id}`] = 0;
-            //Calculating category wise budget
-            if (category_budget[`${category[index]._id}`]) {
-                category_budget[`${category[index]._id}`] += category[index].budget;
-            } else {
-                category_budget[`${category[index]._id}`] = category[index].budget;
-            }
+        if(customData){
+            res.status(200).send(customData);
         }
-
-        //Calculation of expense
-        for (let index = 0; index < weeklyData.length; index++) {
-            totalExpense += weeklyData[index].amount;
-            category_expense[`${weeklyData[index].category}`] += weeklyData[index].amount;
-        }
-
-        //Total extra expence
-        if (totalExpense > totalBudget) {
-            extraExpence = totalExpense - totalBudget;
-        }
-
-        //Calculation of category wise extra expense 
-        for (let key in category_budget) {
-            if (category_budget[key] < category_expense[key]) {
-                extraExpence_category[key] = category_expense[key] - category_budget[key];
-            }
-        }
-
-        res.json({ totalExpense, category_expense, totalBudget, category_budget, extraExpence, extraExpence_category });
 
     }
-    catch (err) {
+    catch(err){
         console.log(err);
         res.status(500).send("Internal server error");
     }
 });
+
+router.post('/categoryDetails', async(req,res)=>{
+    try{
+        const category= req.body.id;
+        console.log(req.body);
+        const data = await Expense.find({category: category,
+            date:{
+                $gte: new Date(new Date().getFullYear(),new Date().getMonth()),
+                $lt: new Date(new Date().getFullYear(),new Date().getMonth()+1),
+            }
+        });
+        if(data){
+            res.status(200).send(data);
+            console.log(data);
+        }
+    }
+    catch(err){
+        console.log(err);
+        res.status(500).send('Internal Server error');
+    }
+});
+
+router.post('/deleteCategory',authenticate,async(req,res)=>{
+    try{
+        const id = req.body.catID;
+        
+        console.log(id);
+        const delCat = await Category.findByIdAndDelete({_id:id});
+        if(delCat){
+            res.status(200).send("Successfully Deleted");
+        }
+        // const Expenses = await Expense.fin({});
+    }
+    catch(err){
+        console.log(err);
+        res.status(500).send("Internal server error");
+    }
+});
+
+
 
 module.exports = router;

@@ -1,6 +1,3 @@
-const express = require('express');
-const router = express.Router();
-const User = require('../models/User');
 const nodemailer = require("nodemailer");
 const {google} = require('googleapis');
 
@@ -13,7 +10,7 @@ const oAuth2Client = new google.auth.OAuth2(CLIENT_ID,CLIENT_SECRET,REDIRECT_URI
 oAuth2Client.setCredentials({refresh_token:REFRESH_TOKEN});
 
 const sendMail = async(body)=>{
-    const {email, message} = body;
+    const {email,newPass} = body;
     try{
       const accessToken = await oAuth2Client.getAccessToken();
       const transporter = nodemailer.createTransport({
@@ -32,8 +29,8 @@ const sendMail = async(body)=>{
       const mailOptions = {
         from: 'Expense-Management@AFour Tech <baribhushan9120@gmail.com>',
         to: email,
-        subject: 'Test App',
-        text: `This is your new password ${message}`
+        subject: 'Exp App',
+        text: "This is your new password: "+newPass
       }
 
       const result  =await transporter.sendMail(mailOptions);

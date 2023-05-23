@@ -10,6 +10,10 @@ const CategorySchema = new mongoose.Schema({
         ref:'User',
         require: true,
     },
+    spend:{
+        type: Number,
+        required: true,
+    },
     budget:{
         type: Number,
         required: true,

@@ -20,7 +20,7 @@ router.post('/createUser',
         body('password', 'Must be more than 5 character').isLength({ min: 5 })
     ]
     , async (req, res) => {
-
+        console.log(req.body);
         //Express validator validation
         const error = validationResult(req);
         if (!error.isEmpty()) {
@@ -66,11 +66,12 @@ router.post('/login',
         body('password','Password must be more than 5 char').isLength({min:5})
     ],
     async(req,res)=>{
+        console.log(req.body);
         const error = validationResult(req);
         if (!error.isEmpty()) {
             return res.status(400).json({error: error.array()});
+            
         } 
-
         const {email,password} = req.body;
         try{
             const user = await User.findOne({email:email});
@@ -81,14 +82,13 @@ router.post('/login',
             if(!pass){
                 return res.status(400).json({error: 'Invalid Credentials'});
             }
-
             const data ={
                 user:{
                     id: user.id
                 }
             };
-            // const authToken = jwt.sign(data,JWT_SECRET);
-            const authToken = jwt.sign({ data, exp: Math.floor(Date.now() / 1000) + 2*(60 * 60) }, secret);
+            const authToken = jwt.sign(data,JWT_SECRET);
+            // const authToken = jwt.sign({ data, exp: Math.floor(Date.now() / 1000) + 2*(60 * 60) }, JWT_SECRET);
             res.json({authToken});
         }
         catch(err){
@@ -101,6 +101,7 @@ router.post('/login',
 router.post('/resetPassword', authenticate,[
     body('password').isLength({min:5}),
 ] ,async(req,res) =>{
+    console.log("INSIDE");
     const error = validationResult(req);
     if (!error.isEmpty()) {
         return res.status(400).json({error: error.array()});
@@ -129,17 +130,16 @@ router.post('/forgotPassword', async (req,res)=>{
         if(!user){
             return res.status(400).json({ error: 'Email not registered' });
         }
-        const newPass = `${Math.floor(Math.random()*10000)}+Afour`;
-        
-        const success = await sendMail(email,newPass);
+        const newPass = `${Math.floor(Math.random()*10000)}Afour`;
+        const success = await sendMail({email,newPass});
         if(!success){
             return res.status(500).send("Internal server error");
         }
         const salt = await bcrypt.genSalt(10);
         const encryptedPass = await bcrypt.hash(newPass,salt);
-        const reset = await User.findOneAndUpdate({_id: req.user.id}, {password: encryptedPass});
-
-        return res.status(200).json({success});
+        const reset = await User.findOneAndUpdate({email: email}, {password: encryptedPass});
+        
+        return res.status(200).json({reset});
     }
     catch(err){
         console.log(err);
@@ -147,5 +147,15 @@ router.post('/forgotPassword', async (req,res)=>{
     }
 });
 
+router.post('/logout',async(req,res)=>{
+    try{
+        req.headers['auth-token'] = '';
+        res.status(200).send('Success');
+    }
+    catch(err){
+        console.log(err);
+        res.status(500).send('Error occured');
+    }
+});
 
 module.exports = router;
