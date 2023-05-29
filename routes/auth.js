@@ -55,7 +55,7 @@ router.post('/createUser',
         }
         catch (err) {
             console.log(err);
-            res.status(500).send('Error occured');
+            res.status(500).send(err.message);
         }
     });
 
@@ -70,7 +70,6 @@ router.post('/login',
         const error = validationResult(req);
         if (!error.isEmpty()) {
             return res.status(400).json({error: error.array()});
-            
         } 
         const {email,password} = req.body;
         try{

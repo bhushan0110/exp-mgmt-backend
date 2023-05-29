@@ -3,7 +3,7 @@ const connectToDB = require('./db');
 require('dotenv').config();
 const cors = require('cors');
 connectToDB(); // Connect to DB
-
+const auth = require('./routes/auth');
 const app = express();
 const port = 5000;
 
@@ -17,7 +17,7 @@ app.use((req, res, next) => {
   
 app.use(express.json());
 //Available routes
-app.use('/auth',require('./routes/auth'));
+app.use('/auth', auth);
 app.use('/expense',require('./routes/expense_category'));
 app.use('/query',require('./routes/operations'));
 app.use('/mail',require('./routes/email'));
